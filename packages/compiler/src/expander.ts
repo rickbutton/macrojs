@@ -11,6 +11,9 @@ function tokIsLiteral(tok: Token) {
            tok.type === tokTypes._false ||
            tok.type === tokTypes.regexp;
 }
+function tokIsIdent(tok: Token) {
+    return tok.type === tokTypes.name;
+}
 
 // TODO: this needs to care about macro phase for hygeine
 interface ExpansionBindings {
@@ -76,21 +79,25 @@ export class Expander {
         // TODO, only single label matches
         // eventually will need to add another kind
         // for repeats and other groupings
-        if (match.kind.name === "literal") {
-            const tok = this.currentToken();
-            if (tok && tokIsLiteral(tok)) {
-                tok.value = (tok as any).realValue || tok.value;
+        const tok = this.currentToken();
+        if (!tok) return false;
 
-                this.insertBindings(bindings, {
-                    [match.name.name]: [tok],
-                });
-                this.nextToken();
-                return true;
-            }
-            return false;
-        } else {
-            return false;
+        if (match.kind.name === "literal" && tokIsLiteral(tok)) {
+            tok.value = (tok as any).realValue || tok.value;
+
+            this.insertBindings(bindings, {
+                [match.name.name]: [tok],
+            });
+            this.nextToken();
+            return true;
+        } else if (match.kind.name === "ident" && tokIsIdent(tok)) {
+            this.insertBindings(bindings, {
+                [match.name.name]: [tok],
+            });
+            this.nextToken();
+            return true;
         }
+        return false;
     }
     tryMacroBody(body: MacroBody, bindings: ExpansionBindings): namedTypes.Program {
         // need to handle repeats at the token level
@@ -115,7 +122,7 @@ export class Expander {
                 }
             }
         }
-        return this.context.parse(result, hooks) as any;
+        return this.context.parse(result, hooks);
     }
     resetToken(idx: number = 0) {
         this.idx = idx;

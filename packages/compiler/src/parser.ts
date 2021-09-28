@@ -34,6 +34,7 @@ export class MacroParser extends (Parser as any) {
     constructor(context: Context, src: string | Token[], hooks: ParseHooks) {
         super({
             ecmaVersion: "latest",
+            sourceType: "module",
             locations: true,
             onComment: (c: any) => this.comments.push(c),
             onToken: (t: Token) => {
@@ -235,16 +236,6 @@ export class MacroParser extends (Parser as any) {
             return this.finishNode(node, "MacroInvocation")
         } else {
             return super.parseSubscripts(base, startPos, startLoc, noCalls, forInit);
-        }
-    }
-    parseExpressionStatement(node: any, expr: any) {
-        const stmt: namedTypes.ExpressionStatement =
-            super.parseExpressionStatement(node, expr);
-
-        if ((stmt.expression.type) as any === "MacroInvocation") {
-            return stmt.expression;
-        } else {
-            return stmt;
         }
     }
 }

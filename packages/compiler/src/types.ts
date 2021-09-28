@@ -30,7 +30,7 @@ export interface MacroDeclaration extends Omit<namedTypes.Statement, "type"> {
     patterns: MacroPattern[];
     scopeStack: Scope[];
 }
-export interface MacroInvocation extends Omit<namedTypes.Statement, "type"> {
+export interface MacroInvocation extends Omit<namedTypes.Expression, "type"> {
     type: "MacroInvocation";
     id: namedTypes.Identifier;
     tokens: Token[];
@@ -72,7 +72,7 @@ export function setupAstTypes() {
     .field("scopeStack", [Object])
 
     Type.def("MacroInvocation")
-    .bases("Statement")
+    .bases("Expression")
     .build("id", "tokens", "macro", "scopeStack")
     .field("id", Type.def("Identifier"))
     .field("tokens", [Object])
