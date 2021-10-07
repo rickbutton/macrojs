@@ -30,18 +30,27 @@ macro literal {
     }
 }
 
-foo(1, 2, 3);
-bar(baz);
-foo(9);
-console.log("in expr: " + foo(1234));
+macro swap {
+    ($a:expr => $b:expr) => {
+        console.log($b, $a)
+    }
+}
 
-literal(TWO);
-literal(ONE);
+macro make {
+    ($name:ident : $expr:expr) => {
+        ({ $name: ($expr) })
+    }
+    ($name:literal : $expr:expr) => {
+        ({ [$name]: ($expr) })
+    }
+}
+
+console.log(make(foo: 1 + 2));
+console.log(make( "BAZ" : 3 * 4));
 `;
 
 const compiler = createCompiler();
-
-const ast = compiler.parse(src, {});
+const ast = compiler.parseProgram(src, {});
 const transformed = compiler.compile(ast);
 fs.writeFileSync("out.json", JSON.stringify(transformed, null, 4));
 const out = compiler.codegen(transformed);

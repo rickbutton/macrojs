@@ -4,13 +4,15 @@ import type { Scope } from "./types";
 
 type Node = namedTypes.Node;
 type Program = namedTypes.Program;
+type Expression = namedTypes.Expression;
 
 export interface ParseHooks {
     getScopeStackForToken?: (token: Token) => Scope[];
 }
 
 export interface Context {
-    parse(src: string | Token[], hooks: ParseHooks): Program;
+    parseProgram(src: string | Token[], hooks: ParseHooks): Program;
+    parseMacroArgumentExpression(src: string | Token[], hooks: ParseHooks): { expression: Expression, tokens: Token[] };
     compile(ast: Program): Program;
     codegen(ast: Node): string;
 }

@@ -1,5 +1,5 @@
 import * as recast from "recast";
-import { setupAstTypes, MacroInvocation } from "./types";
+import { setupAstTypes, MacroInvocation, MacroArgumentExpression } from "./types";
 import { MacroParser } from "./parser";
 import { Expander } from "./expander";
 import { namedTypes, builders } from "ast-types";
@@ -8,8 +8,12 @@ import type { Token } from "acorn";
 
 setupAstTypes();
 
-function parse(context: Context, src: string | Token[], hooks: ParseHooks): namedTypes.Program {
-    return MacroParser.parse(context, src, hooks);
+function parseProgram(context: Context, src: string | Token[], hooks: ParseHooks): namedTypes.Program {
+    return MacroParser.parseProgram(context, src, hooks);
+}
+
+function parseMacroArgumentExpression(context: Context, src: string | Token[], hooks: ParseHooks): MacroArgumentExpression {
+    return MacroParser.parseMacroArgumentExpression(context, src, hooks);
 }
 
 function unwrapMaybeExpressionStatement(node: namedTypes.Node): namedTypes.Node {
@@ -34,6 +38,9 @@ function compile(context: Context, ast: namedTypes.Program): namedTypes.Program 
 
             const inStatementPosition = namedTypes.ExpressionStatement.check(path.parent.node);
 
+            const parentPath = path.parentPath;
+            const parentNode = path.parentNode;
+
             if (expansion.success) {
                 const compiled = compile(context, expansion.program);
 
@@ -50,6 +57,9 @@ function compile(context: Context, ast: namedTypes.Program): namedTypes.Program 
                     if (inStatementPosition && replacement.every(r => namedTypes.Statement.check(r))) {
                         path.parent.replace(...replacement);
                         this.traverse(path.parent);
+                    } else if (replacement.length === 1 && namedTypes.SequenceExpression.check(replacement[0])) {
+                        path.replace(...replacement[0].expressions);
+                        this.traverse(path);
                     } else {
                         path.replace(...replacement);
                         this.traverse(path);
@@ -69,7 +79,8 @@ function codegen(_context: Context, ast: namedTypes.Node): string {
 export function createCompiler(): Context {
     const context: Context = {} as Context;
 
-    context.parse = parse.bind(null, context);
+    context.parseProgram = parseProgram.bind(null, context);
+    context.parseMacroArgumentExpression = parseMacroArgumentExpression.bind(null, context);
     context.compile = compile.bind(null, context);
     context.codegen = codegen.bind(null, context);
 

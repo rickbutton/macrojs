@@ -82,9 +82,7 @@ export class Expander {
         const tok = this.currentToken();
         if (!tok) return false;
 
-        console.log(`matching ${args.type} to tok ${tok.type.label}:${tok.value}`);
         if (args.type === "MacroPatternVariable") {
-            console.log(`matching kind:${args.kind}`);
             if (args.kind === "literal" && tokIsLiteral(tok)) {
                 tok.value = (tok as any).realValue || tok.value;
 
@@ -99,9 +97,18 @@ export class Expander {
                 });
                 this.nextToken();
                 return true;
+            } else if (args.kind === "expr") {
+                const tokens = this.invocation.tokens.slice(this.idx);
+                const argExpr = this.context.parseMacroArgumentExpression(tokens, {});
+
+                this.idx += argExpr.tokens.length;
+
+                this.insertBindings(bindings, {
+                    [args.name.name]: argExpr.tokens
+                })
+                return true;
             }
         } else if (args.type === "MacroPatternLiteral") {
-            console.log(`matching tok:${args.token.type.label}:${args.token.value}`);
             if (args.token.type === tok.type && args.token.value === tok.value) {
                 this.nextToken();
                 return true;
@@ -132,7 +139,7 @@ export class Expander {
                 }
             }
         }
-        return this.context.parse(result, hooks);
+        return this.context.parseProgram(result, hooks);
     }
     resetToken(idx: number = 0) {
         this.idx = idx;

@@ -9,7 +9,6 @@ export interface Scope {
 };
 
 // approximation of ast-types equivalent types for new AST nodes
-export type MacroMatchKind = "literal";
 export interface MacroBody extends Omit<namedTypes.Node, "type"> {
     type: "MacroBody";
     tokens: Token[];
@@ -18,7 +17,7 @@ export interface MacroBody extends Omit<namedTypes.Node, "type"> {
 export interface MacroPatternVariable extends Omit<namedTypes.Node, "type"> {
     type: "MacroPatternVariable";
     name: namedTypes.Identifier;
-    kind: "literal" | "ident";
+    kind: "literal" | "ident" | "expr";
 }
 export interface MacroPatternLiteral extends Omit<namedTypes.Node, "type"> {
     type: "MacroPatternLiteral";
@@ -43,6 +42,12 @@ export interface MacroInvocation extends Omit<namedTypes.Expression, "type"> {
     tokens: Token[];
     macro: MacroDeclaration;
     scopeStack: Scope[];
+}
+
+export interface MacroArgumentExpression extends Omit<namedTypes.Expression, "type"> {
+    type: "MacroArgumentExpression";
+    expression: namedTypes.Expression;
+    tokens: Token[];
 }
 
 export interface SuccessExpansionResult {
@@ -91,6 +96,12 @@ export function setupAstTypes() {
     .field("tokens", [Object])
     .field("macro", Object)
     .field("scopeStack", [Object]);
+
+    Type.def("MacroArgumentExpression")
+    .bases("Expression")
+    .build("expression", "tokens")
+    .field("expression", Type.def("Expression"))
+    .field("tokens", [Object])
 
     finalize();
 

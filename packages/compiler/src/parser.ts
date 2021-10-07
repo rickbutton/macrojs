@@ -1,4 +1,4 @@
-import { Parser, Token, TokenType, tokTypes } from "acorn";
+import { Options, Parser, Token, TokenType, tokTypes } from "acorn";
 import { namedTypes } from "ast-types";
 import type { Context, ParseHooks } from "./context";
 import { BIND_LEXICAL } from "./scope";
@@ -23,6 +23,7 @@ export function findMacroInScope(scopeStack: Scope[], name: string): MacroDeclar
 }
 
 const MACRO_TOKEN = new TokenType("macro", { keyword: "macro" });
+
 export class MacroParser extends (Parser as any) {
 
     ctx: Context;
@@ -31,7 +32,7 @@ export class MacroParser extends (Parser as any) {
     comments: any[] = [];
     hooks: ParseHooks;
 
-    constructor(context: Context, src: string | Token[], hooks: ParseHooks) {
+    protected constructor(context: Context, src: string | Token[], hooks: ParseHooks) {
         super({
             ecmaVersion: "latest",
             sourceType: "module",
@@ -39,7 +40,7 @@ export class MacroParser extends (Parser as any) {
             onComment: (c: any) => this.comments.push(c),
             onToken: (t: Token) => {
                 return this.allTokens.push(t);
-            },
+            }
         }, typeof src === "string" ? src : "    ");
         this.ctx = context;
 
@@ -57,8 +58,19 @@ export class MacroParser extends (Parser as any) {
         return ast;
     }
 
-    static parse(context: Context, src: string | Token[], hooks: ParseHooks) {
+    static parseProgram(context: Context, src: string | Token[], hooks: ParseHooks) {
         return new MacroParser(context, src, hooks).parse();
+    }
+
+    static parseMacroArgumentExpression(context: Context, src: string | Token[], hooks: ParseHooks) {
+        const parser = new MacroParser(context, src, hooks);
+
+        const node = parser.startNode();
+        parser.nextToken();
+        node.expression = parser.parseMaybeAssign();
+        node.tokens = parser.allTokens;
+
+        return parser.finishNode(node, "MacroArgumentExpression");
     }
 
     finishToken(type: TokenType, word: string): any {
@@ -180,7 +192,7 @@ export class MacroParser extends (Parser as any) {
             const kind = this.value;
             this.expect(tokTypes.name);
             
-            if (kind === "literal" || kind === "ident") {
+            if (kind === "literal" || kind === "ident" || kind === "expr") {
                 node.kind = kind;
             } else {
                 throw new Error("unexpected kind for macro pattern variable");
