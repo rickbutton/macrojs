@@ -14,14 +14,21 @@ export interface MacroBody extends Omit<namedTypes.Node, "type"> {
     type: "MacroBody";
     tokens: Token[];
 }
-export interface MacroMatch extends Omit<namedTypes.Node, "type"> {
-    type: "MacroMatch";
+
+export interface MacroPatternVariable extends Omit<namedTypes.Node, "type"> {
+    type: "MacroPatternVariable";
     name: namedTypes.Identifier;
-    kind: namedTypes.Identifier;
+    kind: "literal" | "ident";
 }
+export interface MacroPatternLiteral extends Omit<namedTypes.Node, "type"> {
+    type: "MacroPatternLiteral";
+    token: Token;
+}
+
+export type MacroPatternArgument = MacroPatternVariable | MacroPatternLiteral;
 export interface MacroPattern extends Omit<namedTypes.Node, "type"> {
     type: "MacroPattern";
-    matches: MacroMatch[];
+    arguments: MacroPatternArgument[];
     body: MacroBody;
 }
 export interface MacroDeclaration extends Omit<namedTypes.Statement, "type"> {
@@ -54,14 +61,20 @@ export function setupAstTypes() {
     .build("tokens")
     .field("tokens", [Object]);
 
-    Type.def("MacroMatch")
+    Type.def("MacroPatternVariable")
     .build("name", "kind")
     .field("name", Type.def("Identifier"))
-    .field("kind", Type.def("Identifier"));
+    .field("kind", Type.or("literal", "ident"));
+
+    Type.def("MacroPatternLiteral")
+    .build("token")
+    .field("token", Object);
 
     Type.def("MacroPattern")
-    .build("matches", "body")
-    .field("matches", [Type.def("MacroMatch")])
+    .build("arguments", "body")
+    .field("arguments",
+           Type.or(Type.def("MacroPatternVariable"),
+                   Type.def("MacroPatternLiteral")))
     .field("body", [Type.def("MacroBody")]);
 
     Type.def("MacroDeclaration")

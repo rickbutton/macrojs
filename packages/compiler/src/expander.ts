@@ -1,7 +1,7 @@
 import { Token, TokenType, tokTypes } from "acorn";
 import type { namedTypes } from "ast-types";
 import type { Context, ParseHooks  } from "./context";
-import type { ExpansionResult, MacroBody, MacroDeclaration, MacroInvocation, MacroMatch, MacroPattern, Scope } from "./types";
+import type { ExpansionResult, MacroBody, MacroDeclaration, MacroInvocation, MacroPattern, MacroPatternArgument, Scope } from "./types";
 
 function tokIsLiteral(tok: Token) {
     return tok.type === tokTypes.num ||
@@ -56,9 +56,9 @@ export class Expander {
         // table (once rhs of bindings accounts for the depth of repeats)
         const bindings: ExpansionBindings = {};
         // each match is a single "argument" to the pattern
-        for (let i = 0; i < pattern.matches.length; i++) {
-            const match = pattern.matches[i];
-            const found = match ? this.tryMatch(match, bindings) : false;
+        for (let i = 0; i < pattern.arguments.length; i++) {
+            const arg = pattern.arguments[i];
+            const found = arg ? this.tryPatternArgument(arg, bindings) : false;
 
             if (!found) {
                 return { success: false, diagnostic: "FIXME argument doesn't match" };
@@ -75,27 +75,37 @@ export class Expander {
         const program = this.tryMacroBody(pattern.body, bindings);
         return { success: true, program };
     }
-    tryMatch(match: MacroMatch, bindings: ExpansionBindings): boolean {
+    tryPatternArgument(args: MacroPatternArgument, bindings: ExpansionBindings): boolean {
         // TODO, only single label matches
         // eventually will need to add another kind
         // for repeats and other groupings
         const tok = this.currentToken();
         if (!tok) return false;
 
-        if (match.kind.name === "literal" && tokIsLiteral(tok)) {
-            tok.value = (tok as any).realValue || tok.value;
+        console.log(`matching ${args.type} to tok ${tok.type.label}:${tok.value}`);
+        if (args.type === "MacroPatternVariable") {
+            console.log(`matching kind:${args.kind}`);
+            if (args.kind === "literal" && tokIsLiteral(tok)) {
+                tok.value = (tok as any).realValue || tok.value;
 
-            this.insertBindings(bindings, {
-                [match.name.name]: [tok],
-            });
-            this.nextToken();
-            return true;
-        } else if (match.kind.name === "ident" && tokIsIdent(tok)) {
-            this.insertBindings(bindings, {
-                [match.name.name]: [tok],
-            });
-            this.nextToken();
-            return true;
+                this.insertBindings(bindings, {
+                    [args.name.name]: [tok],
+                });
+                this.nextToken();
+                return true;
+            } else if (args.kind === "ident" && tokIsIdent(tok)) {
+                this.insertBindings(bindings, {
+                    [args.name.name]: [tok],
+                });
+                this.nextToken();
+                return true;
+            }
+        } else if (args.type === "MacroPatternLiteral") {
+            console.log(`matching tok:${args.token.type.label}:${args.token.value}`);
+            if (args.token.type === tok.type && args.token.value === tok.value) {
+                this.nextToken();
+                return true;
+            }
         }
         return false;
     }

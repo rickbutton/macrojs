@@ -141,13 +141,13 @@ export class MacroParser extends (Parser as any) {
 
         this.expect(tokTypes.parenL);
 
-        node.matches = [];
+        node.arguments = [];
         if (this.type !== tokTypes.parenR) {
 
             let done = false;
             while (!done) {
-                const match = this.parseMacroMatch();
-                node.matches.push(match);
+                const arg = this.parseMacroArgument();
+                node.arguments.push(arg);
 
                 if (this.type === tokTypes.comma) {
                     this.next();
@@ -168,16 +168,30 @@ export class MacroParser extends (Parser as any) {
 
         return this.finishNode(node, "MacroPattern");
     }
-    parseMacroMatch() {
+    parseMacroArgument() {
         const node = this.startNode();
 
-        node.name = this.parseIdent();
+        const name = String(this.value);
+        if (this.type === tokTypes.name && name.startsWith("$")) {
+            node.name = this.parseIdent();
 
-        this.expect(tokTypes.colon);
+            this.expect(tokTypes.colon);
 
-        node.kind = this.parseIdent();
+            const kind = this.value;
+            this.expect(tokTypes.name);
+            
+            if (kind === "literal" || kind === "ident") {
+                node.kind = kind;
+            } else {
+                throw new Error("unexpected kind for macro pattern variable");
+            }
 
-        return this.finishNode(node, "MacroMatch");
+            return this.finishNode(node, "MacroPatternVariable");
+        } else {
+            node.token = new Token(this as any);
+            this.next();
+            return this.finishNode(node, "MacroPatternLiteral");
+        }
     }
     parseMacroBody() {
         const node = this.startNode();

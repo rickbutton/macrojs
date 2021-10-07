@@ -4,20 +4,29 @@ import fs from "fs";
 const src = `
 
 macro foo {
-    (a:literal) => {
-        foo(a, a)
+    ($a:literal) => {
+        foo($a, $a)
     }
-    (a:literal, b:literal) => {
-        foo(a, a, b)
+    ($a:literal, $b:literal) => {
+        foo($a, $a, $b)
     }
-    (a:literal, b:literal, c:literal) => {
-        console.log(a * b * c)
+    ($a:literal, $b:literal, $c:literal) => {
+        console.log($a * $b * $c)
     }
 }
 
 macro bar {
-    (a:ident) => {
-        export const a = 4;
+    ($a:ident) => {
+        export const $a = 4;
+    }
+}
+
+macro literal {
+    (ONE) => {
+        console.log("one")
+    }
+    (TWO) => {
+        console.log("two")
     }
 }
 
@@ -26,7 +35,8 @@ bar(baz);
 foo(9);
 console.log("in expr: " + foo(1234));
 
-
+literal(TWO);
+literal(ONE);
 `;
 
 const compiler = createCompiler();
