@@ -2,19 +2,22 @@
     "name": "@macrojs/cli",
     "version": "0.0.1",
     "main": "dist/index.js",
-    "scripts": {
-        "test": "echo 'install jest!' && false"
-    },
+    "types": "dist/index.d.ts",
+    "scripts": {},
     "dependencies": {
         "@macrojs/compiler": "^0.0.1"
     },
     "files": [
         "dist",
-        "!dist/tsconfig.tsbuildinfo"
+        "!dist/tsconfig.tsbuildinfo",
+        "!dist/**/*.spec.js"
     ],
     "license": "MIT",
     "private": true,
     "publishConfig": {
         "access": "public"
+    },
+    "devDependencies": {
+        "@types/jest": "^27.0.2"
     }
 }

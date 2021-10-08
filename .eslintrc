@@ -20,7 +20,7 @@
         {
             "files": ["*.ts"],
             "parserOptions": {
-                "project": "packages/*/{src,test}/tsconfig.json",
+                "project": "packages/*/tsconfig.json",
                 "EXPERIMENTAL_useSourceOfProjectReferenceRedirect": true
             },
             "extends": [

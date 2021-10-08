@@ -2,20 +2,23 @@
     "name": "@macrojs/compiler",
     "version": "0.0.1",
     "main": "dist/index.js",
-    "scripts": {
-        "test": "echo 'install jest!' && false"
-    },
+    "types": "dist/index.d.js",
     "dependencies": {
         "acorn": "^8.5.0",
+        "ast-types": "^0.14.2",
         "recast": "^0.20.5"
     },
     "files": [
         "dist",
-        "!dist/tsconfig.tsbuildinfo"
+        "!dist/tsconfig.tsbuildinfo",
+        "!dist/**/*.spec.js"
     ],
     "license": "MIT",
     "private": true,
     "publishConfig": {
         "access": "public"
+    },
+    "devDependencies": {
+        "@types/jest": "^27.0.2"
     }
 }

@@ -18,6 +18,7 @@ function tokIsLiteral(tok: Token) {
         tok.type === tokTypes.num ||
         tok.type === tokTypes.string ||
         tok.type === tokTypes._null ||
+        (tok.type === tokTypes.name && tok.value === "undefined") ||
         tok.type === tokTypes._true ||
         tok.type === tokTypes._false ||
         tok.type === tokTypes.regexp
