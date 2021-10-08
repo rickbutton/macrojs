@@ -14,7 +14,7 @@ export interface ParseHooks {
 
 export interface Context {
     parseProgram(src: string | Token[], hooks: ParseHooks): Program;
-    parseMacroArgumentExpression(src: string | Token[], hooks: ParseHooks): { expression: Expression, tokens: Token[] };
+    parseMacroArgumentExpression(src: string | Token[], hooks: ParseHooks): { expression: Expression; tokens: Token[] };
     compile(ast: Program): Program;
     codegen(ast: Node): string;
 }

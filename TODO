@@ -1,14 +1,4 @@
 repetitions
  - level checks
 
-need to direct parser to parse a whole "expression", not generate a program
-every time. this way a single "expression" can be parsed out of a TokenTree
-without the extra tokens after it being always interpretted as
-"the next part of this toplevel program", preventing further parsing by
-the next capture
-
-literals in pattern matches, i.e. make captures special and allow any tokens
-
 make the TokenTree a real tree, nest the groups
-
-macro hygeine

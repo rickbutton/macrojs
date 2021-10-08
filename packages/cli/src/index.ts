@@ -1,7 +1,7 @@
 import { createCompiler } from "@macrojs/compiler";
 import fs from "fs";
 
-const OG = `
+const _OG = `
 
 macro foo {
     ($a:literal) => {

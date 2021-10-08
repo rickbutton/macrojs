@@ -1,15 +1,27 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Token, TokenType, tokTypes } from "acorn";
 import type { namedTypes } from "ast-types";
-import type { Context, ParseHooks  } from "./context";
-import type { ExpansionResult, MacroBody, MacroDeclaration, MacroInvocation, MacroPattern, MacroPatternArgument, Scope } from "./types";
+import type { Context, ParseHooks } from "./context";
+import type {
+    ExpansionResult,
+    MacroBody,
+    MacroDeclaration,
+    MacroInvocation,
+    MacroPattern,
+    MacroPatternArgument,
+    Scope,
+} from "./types";
 
 function tokIsLiteral(tok: Token) {
-    return tok.type === tokTypes.num ||
-           tok.type === tokTypes.string ||
-           tok.type === tokTypes._null ||
-           tok.type === tokTypes._true ||
-           tok.type === tokTypes._false ||
-           tok.type === tokTypes.regexp;
+    return (
+        tok.type === tokTypes.num ||
+        tok.type === tokTypes.string ||
+        tok.type === tokTypes._null ||
+        tok.type === tokTypes._true ||
+        tok.type === tokTypes._false ||
+        tok.type === tokTypes.regexp
+    );
 }
 function tokIsIdent(tok: Token) {
     return tok.type === tokTypes.name;
@@ -26,7 +38,7 @@ export class Expander {
     private macro: MacroDeclaration;
     private invocation: MacroInvocation;
     private context: Context;
-    private idx: number = 0;
+    private idx = 0;
     private color: number = COLOR++;
 
     constructor(invocation: MacroInvocation, context: Context) {
@@ -87,6 +99,7 @@ export class Expander {
 
         if (args.type === "MacroPatternVariable") {
             if (args.kind === "literal" && tokIsLiteral(tok)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 tok.value = (tok as any).realValue || tok.value;
 
                 this.insertBindings(bindings, {
@@ -107,8 +120,8 @@ export class Expander {
                 this.idx += argExpr.tokens.length;
 
                 this.insertBindings(bindings, {
-                    [args.name.name]: argExpr.tokens
-                })
+                    [args.name.name]: argExpr.tokens,
+                });
                 return true;
             }
         } else if (args.type === "MacroPatternLiteral") {
@@ -127,7 +140,7 @@ export class Expander {
             if (token.type === tokTypes.name && bindings[token.value]) {
                 const binding = bindings[token.value] || [];
                 result.push(...binding);
-                binding.forEach(b => inInvocationScope.add(b));
+                binding.forEach((b) => inInvocationScope.add(b));
             } else {
                 result.push(token);
             }
@@ -135,7 +148,7 @@ export class Expander {
         // dynamically change scope for each token
 
         const identifierToToken = new WeakMap<namedTypes.Identifier, Token>();
-        
+
         const hooks: ParseHooks = {
             registerIdentifier: (token: Token, id: namedTypes.Identifier) => {
                 identifierToToken.set(id, token);
@@ -163,39 +176,40 @@ export class Expander {
                 } else {
                     return String(this.color);
                 }
-            }
-        }
+            },
+        };
         return this.context.parseProgram(result, hooks);
     }
-    resetToken(idx: number = 0) {
+    resetToken(idx = 0): void {
         this.idx = idx;
     }
-    nextToken() {
+    nextToken(): void {
         this.idx++;
     }
     currentToken(): Token | undefined {
         return this.invocation.tokens[this.idx];
     }
-    expectToken(type: TokenType) {
+    expectToken(type: TokenType): void {
         if (this.matchToken(type)) {
             this.nextToken();
         } else {
-            throw new Error(`unexpected token, expected ${type.label} but got ${
-                this.currentToken()?.type.label} FIXME`);
+            throw new Error(
+                `unexpected token, expected ${type.label} but got ${this.currentToken()?.type.label ?? ""} FIXME`
+            );
         }
     }
-    eatToken(type: TokenType) {
+    eatToken(type: TokenType): boolean {
         if (this.matchToken(type)) {
             this.nextToken();
             return true;
         }
         return false;
     }
-    matchToken(type: TokenType) {
+    matchToken(type: TokenType): boolean {
         const tok = this.currentToken();
-        return tok && tok.type === type;
+        return Boolean(tok && tok.type === type);
     }
-    insertBindings(bindings: ExpansionBindings, toInsert: ExpansionBindings) {
+    insertBindings(bindings: ExpansionBindings, toInsert: ExpansionBindings): void {
         for (const [name, value] of Object.entries(toInsert)) {
             if (bindings[name]) {
                 throw new Error(`duplicate binding in expander FIXME: ${name}`);

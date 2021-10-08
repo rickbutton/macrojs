@@ -1,8 +1,18 @@
-import { Options, Parser, Token, TokenType, tokTypes } from "acorn";
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import acorn, { Parser, Token, TokenType, tokTypes } from "acorn";
 import { namedTypes } from "ast-types";
 import type { Context, ParseHooks } from "./context";
-import { BIND_LEXICAL, BIND_NONE } from "./scope";
-import type { MacroDeclaration, Scope } from "./types";
+import { BIND_LEXICAL } from "./scope";
+import type {
+    MacroArgumentExpression,
+    MacroBody,
+    MacroDeclaration,
+    MacroPattern,
+    MacroPatternArgument,
+    Scope,
+} from "./types";
 
 function registerMacro(scope: Scope, macro: MacroDeclaration) {
     if (!scope.macros) {
@@ -41,25 +51,63 @@ function findColorForIdentiferInScope(scopeStack: Scope[], id: namedTypes.Identi
 
 const MACRO_TOKEN = new TokenType("macro", { keyword: "macro" });
 
-export class MacroParser extends (Parser as any) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ParserAny = any;
+declare class BaseParser extends Parser {
+    startNode(): ParserAny;
+    nextToken(): void;
+    parseMaybeAssign(): ParserAny;
+    finishNode(...args: ParserAny[]): namedTypes.Node;
+    finishToken(...args: ParserAny[]): ParserAny;
+    updateContext(prevType: ParserAny): ParserAny;
+    readToken(code: ParserAny): void;
+    skipSpace(): void;
+    parseStatement(context: ParserAny, topLevel: ParserAny, exps: ParserAny): ParserAny;
+    next(): void;
+    expect(type: ParserAny): void;
+    parseSubscripts(
+        base: ParserAny,
+        startPos: ParserAny,
+        startLoc: ParserAny,
+        noCalls: ParserAny,
+        forInit: ParserAny
+    ): ParserAny;
+    parseIdent(...args: ParserAny[]): namedTypes.Identifier;
+    currentScope(): Scope;
+    checkLValSimple(id: namedTypes.Identifier, bindingType: ParserAny, checkClases: ParserAny): void;
+    startNodeAt(start: ParserAny, loc: ParserAny): ParserAny;
+    isContextual(name: string): boolean;
+    isLet(context: ParserAny): boolean;
 
+    type: ParserAny;
+    start: number;
+    end: number;
+    startLoc?: acorn.Position;
+    endLoc?: acorn.Position;
+    value: ParserAny;
+    scopeStack: Scope[];
+}
+export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
     ctx: Context;
     srcTokens: Token[] | null = null;
     lastToken: Token | null = null;
     allTokens: Token[] = [];
-    comments: any[] = [];
+    comments: ParserAny[] = [];
     hooks: ParseHooks;
 
     protected constructor(context: Context, src: string | Token[], hooks: ParseHooks) {
-        super({
-            ecmaVersion: "latest",
-            sourceType: "module",
-            locations: true,
-            onComment: (c: any) => this.comments.push(c),
-            onToken: (t: Token) => {
-                return this.allTokens.push(t);
-            }
-        }, typeof src === "string" ? src : "    ");
+        super(
+            {
+                ecmaVersion: "latest",
+                sourceType: "module",
+                locations: true,
+                onComment: (c: ParserAny) => this.comments.push(c),
+                onToken: (t: Token) => {
+                    return this.allTokens.push(t);
+                },
+            },
+            typeof src === "string" ? src : "    "
+        );
         this.ctx = context;
 
         if (Array.isArray(src)) {
@@ -68,19 +116,23 @@ export class MacroParser extends (Parser as any) {
         this.hooks = hooks;
     }
 
-    parse(): namedTypes.Program {
+    override parse(): acorn.Node {
         const ast = super.parse();
-        ast.tokens = this.allTokens;
-        ast.comments = this.comments;
+        (ast as ParserAny).tokens = this.allTokens;
+        (ast as ParserAny).comments = this.comments;
 
-        return ast;
+        return ast as ParserAny as acorn.Node;
     }
 
-    static parseProgram(context: Context, src: string | Token[], hooks: ParseHooks) {
-        return new MacroParser(context, src, hooks).parse();
+    static parseProgram(context: Context, src: string | Token[], hooks: ParseHooks): namedTypes.Program {
+        return new MacroParser(context, src, hooks).parse() as ParserAny as namedTypes.Program;
     }
 
-    static parseMacroArgumentExpression(context: Context, src: string | Token[], hooks: ParseHooks) {
+    static parseMacroArgumentExpression(
+        context: Context,
+        src: string | Token[],
+        hooks: ParseHooks
+    ): MacroArgumentExpression {
         const parser = new MacroParser(context, src, hooks);
 
         const node = parser.startNode();
@@ -88,10 +140,10 @@ export class MacroParser extends (Parser as any) {
         node.expression = parser.parseMaybeAssign();
         node.tokens = parser.allTokens;
 
-        return parser.finishNode(node, "MacroArgumentExpression");
+        return parser.finishNode(node, "MacroArgumentExpression") as ParserAny as MacroArgumentExpression;
     }
 
-    finishToken(type: TokenType, word: string): any {
+    override finishToken(type: TokenType, word: string): ParserAny {
         if (type.label === "name" && word === "macro") {
             return super.finishToken(MACRO_TOKEN, word);
         } else {
@@ -99,7 +151,7 @@ export class MacroParser extends (Parser as any) {
         }
     }
 
-    readToken(code: any) {
+    override readToken(code: ParserAny): void {
         const token = this.srcTokens?.shift();
         if (token) {
             this.lastToken = token;
@@ -122,22 +174,22 @@ export class MacroParser extends (Parser as any) {
         }
     }
 
-    skipSpace() {
+    override skipSpace(): void {
         if (!this.srcTokens) {
             super.skipSpace();
         }
     }
 
     // todo: allow macro in expression position
-    parseStatement(context: any, topLevel: unknown, exps: unknown) {
+    override parseStatement(context: ParserAny, topLevel: ParserAny, exps: ParserAny): ParserAny {
         if (this.type === MACRO_TOKEN) {
             return this.parseMacroDeclaration();
         } else {
             return super.parseStatement(context, topLevel, exps);
         }
     }
-    parseMacroDeclaration() {
-        let node = this.startNode();
+    parseMacroDeclaration(this: MacroParser): MacroDeclaration {
+        const node = this.startNode();
 
         // skip 'macro'
         this.next();
@@ -160,17 +212,16 @@ export class MacroParser extends (Parser as any) {
 
         this.finishNode(node, "MacroDeclaration");
 
-        registerMacro(this.currentScope(), node)
-        return node;
+        registerMacro(this.currentScope(), node);
+        return node as MacroDeclaration;
     }
-    parseMacroPattern() {
+    parseMacroPattern(): MacroPattern {
         const node = this.startNode();
 
         this.expect(tokTypes.parenL);
 
         node.arguments = [];
         if (this.type !== tokTypes.parenR) {
-
             let done = false;
             while (!done) {
                 const arg = this.parseMacroArgument();
@@ -193,9 +244,9 @@ export class MacroParser extends (Parser as any) {
 
         node.body = this.parseMacroBody();
 
-        return this.finishNode(node, "MacroPattern");
+        return this.finishNode(node, "MacroPattern") as ParserAny as MacroPattern;
     }
-    parseMacroArgument() {
+    parseMacroArgument(): MacroPatternArgument {
         const node = this.startNode();
 
         const name = String(this.value);
@@ -206,52 +257,54 @@ export class MacroParser extends (Parser as any) {
 
             const kind = this.value;
             this.expect(tokTypes.name);
-            
+
             if (kind === "literal" || kind === "ident" || kind === "expr") {
                 node.kind = kind;
             } else {
                 throw new Error("unexpected kind for macro pattern variable");
             }
 
-            return this.finishNode(node, "MacroPatternVariable");
+            return this.finishNode(node, "MacroPatternVariable") as ParserAny as MacroPatternArgument;
         } else {
-            node.token = new Token(this as any);
+            node.token = new Token(this as ParserAny);
             this.next();
-            return this.finishNode(node, "MacroPatternLiteral");
+            return this.finishNode(node, "MacroPatternLiteral") as ParserAny as MacroPatternArgument;
         }
     }
-    parseMacroBody() {
+    parseMacroBody(): MacroBody {
         const node = this.startNode();
         const tokens = this.parseTokenTree(tokTypes.braceR);
         node.tokens = tokens;
-        return this.finishNode(node, "MacroBody");
+        return this.finishNode(node, "MacroBody") as ParserAny as MacroBody;
     }
     parseTokenTree(endGroupTok: TokenType): Token[] {
         const tokens = [];
-        let stack = [endGroupTok];
+        const stack = [endGroupTok];
         while (stack.length > 0 && this.type != tokTypes.eof) {
             const top = stack[stack.length - 1];
 
             if (this.type === top) {
                 stack.pop();
                 if (stack.length > 0) {
-                    tokens.push(new Token(this as any));
+                    tokens.push(new Token(this as ParserAny));
                 }
             } else if (this.type === tokTypes.braceL) {
                 stack.push(tokTypes.braceR);
-                tokens.push(new Token(this as any));
+                tokens.push(new Token(this as ParserAny));
             } else if (this.type === tokTypes.parenL) {
                 stack.push(tokTypes.parenR);
-                tokens.push(new Token(this as any));
+                tokens.push(new Token(this as ParserAny));
             } else if (this.type === tokTypes.bracketL) {
                 stack.push(tokTypes.bracketR);
-                tokens.push(new Token(this as any));
-            } else if (this.type === tokTypes.braceR ||
-                       this.type === tokTypes.parenR ||
-                       this.type === tokTypes.bracketR) {
+                tokens.push(new Token(this as ParserAny));
+            } else if (
+                this.type === tokTypes.braceR ||
+                this.type === tokTypes.parenR ||
+                this.type === tokTypes.bracketR
+            ) {
                 throw new Error("fixme");
             } else {
-                tokens.push(new Token(this as any));
+                tokens.push(new Token(this as ParserAny));
             }
             this.next();
         }
@@ -262,10 +315,16 @@ export class MacroParser extends (Parser as any) {
 
         return tokens;
     }
-    parseSubscripts(base: any, startPos: any, startLoc: any, noCalls: any, forInit: any) {
+    override parseSubscripts(
+        base: ParserAny,
+        startPos: ParserAny,
+        startLoc: ParserAny,
+        noCalls: ParserAny,
+        forInit: ParserAny
+    ): ParserAny {
         const macro = findMacroInScope(this.scopeStack, base.name);
         if (namedTypes.Identifier.check(base) && this.type === tokTypes.parenL && macro) {
-            const node = this.startNodeAt((base as any).start, (base as any).loc.start);
+            const node = this.startNodeAt((base as ParserAny).start, (base as ParserAny).loc.start);
             this.next();
 
             node.id = base;
@@ -274,7 +333,7 @@ export class MacroParser extends (Parser as any) {
             node.tokens = tokens;
             node.scopeStack = this.scopeStack.slice();
 
-            return this.finishNode(node, "MacroInvocation")
+            return this.finishNode(node, "MacroInvocation");
         } else {
             if (namedTypes.Identifier.check(base)) {
                 this.colorIdent(base);
@@ -295,7 +354,7 @@ export class MacroParser extends (Parser as any) {
         }
     }
 
-    checkLValSimple(expr: any, bindingType: any, checkClashes: any) {
+    override checkLValSimple(expr: ParserAny, bindingType: ParserAny, checkClashes: ParserAny): void {
         const oldScopeStack = this.scopeStack;
 
         if (namedTypes.Identifier.check(expr)) {
@@ -316,7 +375,7 @@ export class MacroParser extends (Parser as any) {
         return result;
     }
 
-    isLet(context: any) {
+    override isLet(context: ParserAny): boolean {
         if (this.srcTokens) {
             return this.isContextual("let");
         } else {
@@ -324,7 +383,7 @@ export class MacroParser extends (Parser as any) {
         }
     }
 
-    parseIdent(...args: any[]) {
+    override parseIdent(...args: Parser[]): namedTypes.Identifier {
         const token = this.lastToken;
         const id = super.parseIdent(...args);
         if (token && this.hooks.registerIdentifier) {

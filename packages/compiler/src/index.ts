@@ -1,8 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as recast from "recast";
-import { setupAstTypes, MacroInvocation, MacroArgumentExpression } from "./types";
+import { setupAstTypes, MacroInvocation, MacroArgumentExpression, MacroDeclaration } from "./types";
 import { MacroParser } from "./parser";
 import { Expander } from "./expander";
-import { namedTypes, builders } from "ast-types";
+import { namedTypes } from "ast-types";
 import type { Context, ParseHooks } from "./context";
 import type { Token } from "acorn";
 
@@ -12,17 +15,24 @@ function parseProgram(context: Context, src: string | Token[], hooks: ParseHooks
     return MacroParser.parseProgram(context, src, hooks);
 }
 
-function parseMacroArgumentExpression(context: Context, src: string | Token[], hooks: ParseHooks): MacroArgumentExpression {
+function parseMacroArgumentExpression(
+    context: Context,
+    src: string | Token[],
+    hooks: ParseHooks
+): MacroArgumentExpression {
     return MacroParser.parseMacroArgumentExpression(context, src, hooks);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NodePath<_T> = any;
+
 function compile(context: Context, ast: namedTypes.Program): namedTypes.Program {
     return recast.visit(ast, {
-        visitMacroDeclaration(path: any) {
+        visitMacroDeclaration(path: NodePath<MacroDeclaration>) {
             path.replace();
             return false;
         },
-        visitMacroInvocation(path: any) {
+        visitMacroInvocation(path: NodePath<MacroInvocation>) {
             const node: MacroInvocation = path.node;
 
             const expander = new Expander(node, context);
@@ -64,13 +74,14 @@ function compile(context: Context, ast: namedTypes.Program): namedTypes.Program 
                         }
                     }
 
-                    this.traverse(bodyContainer)
+                    this.traverse(bodyContainer);
                 }
             } else {
                 throw new Error("FIXME handle macro expansion failure: " + expansion.diagnostic);
             }
         },
-    } as any);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any) as namedTypes.Program;
 }
 
 function codegen(_context: Context, ast: namedTypes.Node): string {
@@ -85,5 +96,5 @@ export function createCompiler(): Context {
     context.compile = compile.bind(null, context);
     context.codegen = codegen.bind(null, context);
 
-    return context as Context;
+    return context;
 }
