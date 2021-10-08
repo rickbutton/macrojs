@@ -3,8 +3,13 @@ import { Type, finalize, namedTypes } from "ast-types";
 
 export interface Scope {
     lexical: string[];
-    macros: {
+    vars: string[];
+    functions: string[];
+    macros?: {
         [name: string]: MacroDeclaration;
+    }
+    colors?: {
+        [name: string]: string | null;
     }
 };
 

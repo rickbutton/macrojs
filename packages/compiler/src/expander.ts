@@ -20,11 +20,14 @@ interface ExpansionBindings {
     [name: string]: Token[];
 }
 
+let COLOR = 1;
+
 export class Expander {
     private macro: MacroDeclaration;
     private invocation: MacroInvocation;
     private context: Context;
     private idx: number = 0;
+    private color: number = COLOR++;
 
     constructor(invocation: MacroInvocation, context: Context) {
         this.macro = invocation.macro;
@@ -130,12 +133,35 @@ export class Expander {
             }
         }
         // dynamically change scope for each token
+
+        const identifierToToken = new WeakMap<namedTypes.Identifier, Token>();
+        
         const hooks: ParseHooks = {
-            getScopeStackForToken: (token: Token): Scope[] => {
+            registerIdentifier: (token: Token, id: namedTypes.Identifier) => {
+                identifierToToken.set(id, token);
+            },
+            getScopeStackForIdentifier: (id: namedTypes.Identifier): Scope[] => {
+                const token = identifierToToken.get(id);
+                if (!token) {
+                    throw new Error("could not trace identifier to original token context");
+                }
+
                 if (inInvocationScope.has(token)) {
                     return this.invocation.scopeStack;
                 } else {
                     return this.macro.scopeStack;
+                }
+            },
+            getColorForIdentifier: (id: namedTypes.Identifier): string | null => {
+                const token = identifierToToken.get(id);
+                if (!token) {
+                    throw new Error("could not trace identifier to original token context");
+                }
+
+                if (inInvocationScope.has(token)) {
+                    return null;
+                } else {
+                    return String(this.color);
                 }
             }
         }

@@ -1,22 +1,39 @@
 import { Options, Parser, Token, TokenType, tokTypes } from "acorn";
 import { namedTypes } from "ast-types";
 import type { Context, ParseHooks } from "./context";
-import { BIND_LEXICAL } from "./scope";
+import { BIND_LEXICAL, BIND_NONE } from "./scope";
 import type { MacroDeclaration, Scope } from "./types";
 
-export function registerMacro(scope: Scope, macro: MacroDeclaration) {
+function registerMacro(scope: Scope, macro: MacroDeclaration) {
     if (!scope.macros) {
         scope.macros = {};
     }
     scope.macros[macro.id.name] = macro;
 }
 
-export function findMacroInScope(scopeStack: Scope[], name: string): MacroDeclaration | null {
+function findMacroInScope(scopeStack: Scope[], name: string): MacroDeclaration | null {
     for (let i = scopeStack.length - 1; i >= 0; i--) {
         const scope = scopeStack[i];
         if (scope?.macros && scope.macros[name]) {
             const macro = scope.macros[name];
             return macro || null;
+        }
+    }
+    return null;
+}
+
+function markColor(scope: Scope, name: string, color: string | null) {
+    if (!scope.colors) {
+        scope.colors = {};
+    }
+    scope.colors[name] = color;
+}
+
+function findColorForIdentiferInScope(scopeStack: Scope[], id: namedTypes.Identifier): string | null {
+    for (let i = 0; i < scopeStack.length; i++) {
+        const scope = scopeStack[i];
+        if (scope?.colors && id.name in scope.colors) {
+            return scope.colors[id.name] || null;
         }
     }
     return null;
@@ -28,6 +45,7 @@ export class MacroParser extends (Parser as any) {
 
     ctx: Context;
     srcTokens: Token[] | null = null;
+    lastToken: Token | null = null;
     allTokens: Token[] = [];
     comments: any[] = [];
     hooks: ParseHooks;
@@ -84,6 +102,8 @@ export class MacroParser extends (Parser as any) {
     readToken(code: any) {
         const token = this.srcTokens?.shift();
         if (token) {
+            this.lastToken = token;
+
             const prevType = this.type;
 
             this.start = token.start;
@@ -94,11 +114,6 @@ export class MacroParser extends (Parser as any) {
             this.value = token.value;
 
             this.updateContext(prevType);
-
-            if (this.hooks.getScopeStackForToken) {
-                this.scopeStack = this.hooks.getScopeStackForToken(token);
-            }
-
         } else if (this.srcTokens) {
             this.type = tokTypes.eof;
             this.value = undefined;
@@ -261,7 +276,60 @@ export class MacroParser extends (Parser as any) {
 
             return this.finishNode(node, "MacroInvocation")
         } else {
+            if (namedTypes.Identifier.check(base)) {
+                this.colorIdent(base);
+            }
+
             return super.parseSubscripts(base, startPos, startLoc, noCalls, forInit);
         }
+    }
+
+    private colorIdent(ident: namedTypes.Identifier) {
+        if (this.hooks.getScopeStackForIdentifier && this.hooks.getColorForIdentifier) {
+            const scopeStack = this.hooks.getScopeStackForIdentifier(ident);
+
+            const color = findColorForIdentiferInScope(scopeStack, ident);
+            if (color) {
+                ident.name = `${ident.name}_${color}`;
+            }
+        }
+    }
+
+    checkLValSimple(expr: any, bindingType: any, checkClashes: any) {
+        const oldScopeStack = this.scopeStack;
+
+        if (namedTypes.Identifier.check(expr)) {
+            if (this.hooks.getScopeStackForIdentifier) {
+                this.scopeStack = this.hooks.getScopeStackForIdentifier(expr);
+            }
+
+            if (this.hooks.getColorForIdentifier) {
+                const color = this.hooks.getColorForIdentifier(expr);
+                markColor(this.currentScope(), expr.name, color);
+            }
+
+            this.colorIdent(expr);
+        }
+
+        const result = super.checkLValSimple(expr, bindingType, checkClashes);
+        this.scopeStack = oldScopeStack;
+        return result;
+    }
+
+    isLet(context: any) {
+        if (this.srcTokens) {
+            return this.isContextual("let");
+        } else {
+            return super.isLet(context);
+        }
+    }
+
+    parseIdent(...args: any[]) {
+        const token = this.lastToken;
+        const id = super.parseIdent(...args);
+        if (token && this.hooks.registerIdentifier) {
+            this.hooks.registerIdentifier(token, id);
+        }
+        return id;
     }
 }

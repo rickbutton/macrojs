@@ -7,7 +7,9 @@ type Program = namedTypes.Program;
 type Expression = namedTypes.Expression;
 
 export interface ParseHooks {
-    getScopeStackForToken?: (token: Token) => Scope[];
+    registerIdentifier?: (token: Token, id: namedTypes.Identifier) => void;
+    getScopeStackForIdentifier?: (id: namedTypes.Identifier) => Scope[];
+    getColorForIdentifier?: (id: namedTypes.Identifier) => string | null;
 }
 
 export interface Context {

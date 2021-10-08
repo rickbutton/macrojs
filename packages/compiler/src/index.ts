@@ -16,14 +16,6 @@ function parseMacroArgumentExpression(context: Context, src: string | Token[], h
     return MacroParser.parseMacroArgumentExpression(context, src, hooks);
 }
 
-function unwrapMaybeExpressionStatement(node: namedTypes.Node): namedTypes.Node {
-    if (namedTypes.ExpressionStatement.check(node)) {
-        return node.expression;
-    } else {
-        return node;
-    }
-}
-
 function compile(context: Context, ast: namedTypes.Program): namedTypes.Program {
     return recast.visit(ast, {
         visitMacroDeclaration(path: any) {
@@ -38,32 +30,41 @@ function compile(context: Context, ast: namedTypes.Program): namedTypes.Program 
 
             const inStatementPosition = namedTypes.ExpressionStatement.check(path.parent.node);
 
-            const parentPath = path.parentPath;
-            const parentNode = path.parentNode;
-
             if (expansion.success) {
                 const compiled = compile(context, expansion.program);
+                const body = compiled.body;
 
-                if (compiled.body.length === 0) {
+                if (body.length === 0) {
                     throw new Error("macro returned no results");
-                } else if (!inStatementPosition && compiled.body.length !== 1) {
-                    throw new Error("macro returned multiple results in expression position");
-                } else if (!inStatementPosition && 
-                           !(namedTypes.ExpressionStatement.check(compiled.body[0]) ||
-                             namedTypes.Expression.check(compiled.body[0]))) {
-                    throw new Error("macro returned a non-expression in an expression position");
-                } else {
-                    const replacement = compiled.body.map(unwrapMaybeExpressionStatement);
-                    if (inStatementPosition && replacement.every(r => namedTypes.Statement.check(r))) {
-                        path.parent.replace(...replacement);
-                        this.traverse(path.parent);
-                    } else if (replacement.length === 1 && namedTypes.SequenceExpression.check(replacement[0])) {
-                        path.replace(...replacement[0].expressions);
-                        this.traverse(path);
-                    } else {
-                        path.replace(...replacement);
-                        this.traverse(path);
+                } else if (!inStatementPosition) {
+                    // expression position
+                    if (body.length !== 1) {
+                        throw new Error("macro attempted to expand multiple statements into expression position");
                     }
+                    const stmt = body[0];
+
+                    if (!namedTypes.ExpressionStatement.check(stmt)) {
+                        throw new Error("macro attempted to expand statement into expression position");
+                    }
+
+                    const expr = stmt.expression;
+
+                    path.replace(expr);
+
+                    this.traverse(path);
+                } else {
+                    const stmt = path.parent;
+                    const bodyContainer = stmt.parent;
+
+                    for (let i = body.length - 1; i >= 0; i--) {
+                        if (i === 0) {
+                            stmt.replace(body[i]);
+                        } else {
+                            stmt.insertAfter(body[i]);
+                        }
+                    }
+
+                    this.traverse(bodyContainer)
                 }
             } else {
                 throw new Error("FIXME handle macro expansion failure: " + expansion.diagnostic);
