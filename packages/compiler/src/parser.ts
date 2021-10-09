@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import acorn, { Parser, Token, TokenType, tokTypes } from "acorn";
+import acorn, { Parser, Position, Token, TokenType, tokTypes } from "acorn";
 import { namedTypes } from "ast-types";
 import type { Context, ParseHooks } from "./context";
+import { InternalCompilerError } from "./error";
 import { BIND_LEXICAL } from "./scope";
 import type {
     MacroArgumentExpression,
@@ -78,10 +79,12 @@ declare class BaseParser extends Parser {
     startNodeAt(start: ParserAny, loc: ParserAny): ParserAny;
     isContextual(name: string): boolean;
     isLet(context: ParserAny): boolean;
+    raise(pos: number, message: string): void;
+    unexpected(): void;
 
     type: ParserAny;
-    start: number;
-    end: number;
+    start: number | Position;
+    end: number | Position;
     startLoc?: acorn.Position;
     endLoc?: acorn.Position;
     value: ParserAny;
@@ -89,7 +92,10 @@ declare class BaseParser extends Parser {
 }
 export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
     ctx: Context;
-    srcTokens: Token[] | null = null;
+    srcTokens: {
+        current: Token[];
+        all: Token[];
+    } | null = null;
     lastToken: Token | null = null;
     allTokens: Token[] = [];
     comments: ParserAny[] = [];
@@ -111,7 +117,10 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
         this.ctx = context;
 
         if (Array.isArray(src)) {
-            this.srcTokens = src.slice();
+            this.srcTokens = {
+                current: src.slice(),
+                all: src,
+            };
         }
         this.hooks = hooks;
     }
@@ -152,14 +161,14 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
     }
 
     override readToken(code: ParserAny): void {
-        const token = this.srcTokens?.shift();
+        const token = this.srcTokens?.current.shift();
         if (token) {
             this.lastToken = token;
 
             const prevType = this.type;
 
-            this.start = token.start;
-            this.end = token.end;
+            this.start = token.loc?.start || token.start;
+            this.end = token.loc?.end || token.end;
             this.startLoc = token.loc?.start;
             this.endLoc = token.loc?.end;
             this.type = token.type;
@@ -261,7 +270,7 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
             if (kind === "literal" || kind === "ident" || kind === "expr") {
                 node.kind = kind;
             } else {
-                throw new Error("unexpected kind for macro pattern variable");
+                this.raise(node.start, `capturing macro argument has invalid kind '${String(kind)}'`);
             }
 
             return this.finishNode(node, "MacroPatternVariable") as ParserAny as MacroPatternArgument;
@@ -302,7 +311,7 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
                 this.type === tokTypes.parenR ||
                 this.type === tokTypes.bracketR
             ) {
-                throw new Error("fixme");
+                this.unexpected();
             } else {
                 tokens.push(new Token(this as ParserAny));
             }
@@ -310,7 +319,8 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
         }
 
         if (stack.length > 0) {
-            throw new Error("fixme unbalanced");
+            const top = stack[stack.length - 1];
+            this.raise(this.start, `expected ${top?.label ?? "<unk>"}`);
         }
 
         return tokens;
@@ -390,5 +400,34 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
             this.hooks.registerIdentifier(token, id);
         }
         return id;
+    }
+
+    override raise(pos: ParserAny, message: string): void {
+        if (this.srcTokens) {
+            const tokens = this.srcTokens.all;
+
+            let token = null;
+            for (let i = 0; i < tokens.length; i++) {
+                if (tokens[i]?.start ?? Number.MAX_SAFE_INTEGER <= pos) {
+                    token = tokens[i];
+                }
+            }
+
+            if (!token || !token.loc) {
+                throw new InternalCompilerError("expected token to have a location");
+            }
+
+            if (typeof pos === "number") {
+                throw new InternalCompilerError("expected number");
+            }
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+            const withLoc = `${message} (${pos.line}:${pos.column})`;
+            const error = new SyntaxError(withLoc);
+            (error as ParserAny).pos = 0;
+            (error as ParserAny).loc = pos;
+            throw error;
+        } else {
+            return super.raise(pos, message);
+        }
     }
 }

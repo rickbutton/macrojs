@@ -3,15 +3,8 @@
 import { Token, TokenType, tokTypes } from "acorn";
 import type { namedTypes } from "ast-types";
 import type { Context, ParseHooks } from "./context";
-import type {
-    ExpansionResult,
-    MacroBody,
-    MacroDeclaration,
-    MacroInvocation,
-    MacroPattern,
-    MacroPatternArgument,
-    Scope,
-} from "./types";
+import { ExpansionError, InternalCompilerError } from "./error";
+import type { MacroBody, MacroDeclaration, MacroInvocation, MacroPattern, MacroPatternArgument, Scope } from "./types";
 
 function tokIsLiteral(tok: Token) {
     return (
@@ -47,21 +40,18 @@ export class Expander {
         this.invocation = invocation;
         this.context = context;
     }
-    expand(): ExpansionResult {
+    expand(): namedTypes.Program {
         for (const pattern of this.macro.patterns) {
             const result = this.tryPattern(pattern);
 
-            if (result.success) {
+            if (result) {
                 return result;
             }
         }
 
-        return {
-            success: false,
-            diagnostic: `no matches found for macro ${this.macro.id.name}`,
-        };
+        throw ExpansionError.fromInvocation(this.invocation, "no matching patterns for invocation");
     }
-    tryPattern(pattern: MacroPattern): ExpansionResult {
+    tryPattern(pattern: MacroPattern): namedTypes.Program | null {
         this.resetToken();
 
         // bindings is a map from
@@ -74,46 +64,36 @@ export class Expander {
         // each match is a single "argument" to the pattern
         for (let i = 0; i < pattern.arguments.length; i++) {
             const arg = pattern.arguments[i];
-            const found = arg ? this.tryPatternArgument(arg, bindings) : false;
-
-            if (!found) {
-                return { success: false, diagnostic: "FIXME argument doesn't match" };
-            }
-
+            this.tryPatternArgument(arg, bindings);
             this.eatToken(tokTypes.comma);
         }
 
-        if (this.currentToken()) {
-            return { success: false, diagnostic: "FIXME incorrect number of arguments" };
+        const tok = this.currentToken();
+        if (tok) {
+            return null;
         }
 
         // try to expand body with bindings
-        const program = this.tryMacroBody(pattern.body, bindings);
-        return { success: true, program };
+        return this.tryMacroBody(pattern.body, bindings);
     }
-    tryPatternArgument(args: MacroPatternArgument, bindings: ExpansionBindings): boolean {
-        // TODO, only single label matches
+    tryPatternArgument(args: MacroPatternArgument, bindings: ExpansionBindings): void {
         // eventually will need to add another kind
         // for repeats and other groupings
         const tok = this.currentToken();
-        if (!tok) return false;
+        if (!tok) {
+            return;
+        }
 
         if (args.type === "MacroPatternVariable") {
             if (args.kind === "literal" && tokIsLiteral(tok)) {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 tok.value = (tok as any).realValue || tok.value;
 
-                this.insertBindings(bindings, {
-                    [args.name.name]: [tok],
-                });
-                this.nextToken();
-                return true;
+                this.insertBinding(bindings, args.name, [tok]);
+                return this.nextToken();
             } else if (args.kind === "ident" && tokIsIdent(tok)) {
-                this.insertBindings(bindings, {
-                    [args.name.name]: [tok],
-                });
-                this.nextToken();
-                return true;
+                this.insertBinding(bindings, args.name, [tok]);
+                return this.nextToken();
             } else if (args.kind === "expr") {
                 const tokens = this.invocation.tokens.slice(this.idx);
                 const argExpr = this.context.parseMacroArgumentExpression(tokens, {});
@@ -138,18 +118,16 @@ export class Expander {
                     options: {},
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } as any);
-                this.insertBindings(bindings, {
-                    [args.name.name]: [leftParen, ...argExpr.tokens, rightParen],
-                });
-                return true;
+                this.insertBinding(bindings, args.name, [leftParen, ...argExpr.tokens, rightParen]);
+                return;
             }
         } else if (args.type === "MacroPatternLiteral") {
             if (args.token.type === tok.type && args.token.value === tok.value) {
-                this.nextToken();
-                return true;
+                return this.nextToken();
             }
         }
-        return false;
+
+        throw ExpansionError.fromToken(tok, this.invocation, "unexpected argument to macro pattern");
     }
     tryMacroBody(body: MacroBody, bindings: ExpansionBindings): namedTypes.Program {
         // need to handle repeats at the token level
@@ -175,7 +153,7 @@ export class Expander {
             getScopeStackForIdentifier: (id: namedTypes.Identifier): Scope[] => {
                 const token = identifierToToken.get(id);
                 if (!token) {
-                    throw new Error("could not trace identifier to original token context");
+                    throw new InternalCompilerError("could not trace identifier to original token context");
                 }
 
                 if (inInvocationScope.has(token)) {
@@ -187,7 +165,7 @@ export class Expander {
             getColorForIdentifier: (id: namedTypes.Identifier): string | null => {
                 const token = identifierToToken.get(id);
                 if (!token) {
-                    throw new Error("could not trace identifier to original token context");
+                    throw new InternalCompilerError("could not trace identifier to original token context");
                 }
 
                 if (inInvocationScope.has(token)) {
@@ -215,8 +193,10 @@ export class Expander {
         if (this.matchToken(type)) {
             this.nextToken();
         } else {
-            throw new Error(
-                `unexpected token, expected ${type.label} but got ${this.currentToken()?.type.label ?? ""} FIXME`
+            throw ExpansionError.fromToken(
+                this.currentToken(),
+                this.invocation,
+                `unexpected token, expected ${type.label}`
             );
         }
     }
@@ -231,12 +211,10 @@ export class Expander {
         const tok = this.currentToken();
         return Boolean(tok && tok.type === type);
     }
-    insertBindings(bindings: ExpansionBindings, toInsert: ExpansionBindings): void {
-        for (const [name, value] of Object.entries(toInsert)) {
-            if (bindings[name]) {
-                throw new Error(`duplicate binding in expander FIXME: ${name}`);
-            }
-            bindings[name] = value;
+    insertBinding(bindings: ExpansionBindings, name: namedTypes.Identifier, value: Token[]): void {
+        if (bindings[name.name]) {
+            throw ExpansionError.fromIdentifier(name, this.invocation, "duplicate capturing macro argument name");
         }
+        bindings[name.name] = value;
     }
 }

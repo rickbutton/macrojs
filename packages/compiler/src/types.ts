@@ -55,16 +55,6 @@ export interface MacroArgumentExpression extends Omit<namedTypes.Expression, "ty
     tokens: Token[];
 }
 
-export interface SuccessExpansionResult {
-    success: true;
-    program: namedTypes.Program;
-}
-export interface FailureExpansionResult {
-    success: false;
-    diagnostic: string;
-}
-export type ExpansionResult = SuccessExpansionResult | FailureExpansionResult;
-
 export function setupAstTypes(): void {
     // dynamic generation of macrojs AST code for ast-types
     Type.def("MacroBody").build("tokens").field("tokens", [Object]);

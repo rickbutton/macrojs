@@ -1,5 +1,5 @@
 import type { namedTypes } from "ast-types";
-import type { Token } from "acorn";
+import type { SourceLocation, Token } from "acorn";
 import type { Scope } from "./types";
 
 type Node = namedTypes.Node;

@@ -8,6 +8,7 @@ import { Expander } from "./expander";
 import { namedTypes } from "ast-types";
 import type { Context, ParseHooks } from "./context";
 import type { Token } from "acorn";
+import { ExpansionError } from "./error";
 
 setupAstTypes();
 
@@ -40,44 +41,43 @@ function compile(context: Context, ast: namedTypes.Program): namedTypes.Program 
 
             const inStatementPosition = namedTypes.ExpressionStatement.check(path.parent.node);
 
-            if (expansion.success) {
-                const compiled = compile(context, expansion.program);
-                const body = compiled.body;
+            const compiled = compile(context, expansion);
+            const body = compiled.body;
 
-                if (body.length === 0) {
-                    throw new Error("macro returned no results");
-                } else if (!inStatementPosition) {
-                    // expression position
-                    if (body.length !== 1) {
-                        throw new Error("macro attempted to expand multiple statements into expression position");
-                    }
-                    const stmt = body[0];
-
-                    if (!namedTypes.ExpressionStatement.check(stmt)) {
-                        throw new Error("macro attempted to expand statement into expression position");
-                    }
-
-                    const expr = stmt.expression;
-
-                    path.replace(expr);
-
-                    this.traverse(path);
-                } else {
-                    const stmt = path.parent;
-                    const bodyContainer = stmt.parent;
-
-                    for (let i = body.length - 1; i >= 0; i--) {
-                        if (i === 0) {
-                            stmt.replace(body[i]);
-                        } else {
-                            stmt.insertAfter(body[i]);
-                        }
-                    }
-
-                    this.traverse(bodyContainer);
+            if (body.length === 0) {
+                throw ExpansionError.fromInvocation(node, "macro expansion yielded no expressions or statements");
+            } else if (!inStatementPosition) {
+                // expression position
+                if (body.length !== 1) {
+                    throw ExpansionError.fromInvocation(
+                        node,
+                        "macro attempted to expand multiple statements into expression position"
+                    );
                 }
+                const stmt = body[0];
+
+                if (!namedTypes.ExpressionStatement.check(stmt)) {
+                    throw ExpansionError.fromInvocation(node, "macro attempted to expand statement into expression position");
+                }
+
+                const expr = stmt.expression;
+
+                path.replace(expr);
+
+                this.traverse(path);
             } else {
-                throw new Error("FIXME handle macro expansion failure: " + expansion.diagnostic);
+                const stmt = path.parent;
+                const bodyContainer = stmt.parent;
+
+                for (let i = body.length - 1; i >= 0; i--) {
+                    if (i === 0) {
+                        stmt.replace(body[i]);
+                    } else {
+                        stmt.insertAfter(body[i]);
+                    }
+                }
+
+                this.traverse(bodyContainer);
             }
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

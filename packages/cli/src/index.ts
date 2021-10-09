@@ -49,11 +49,9 @@ console.log(make(foo: 1 + 2));
 console.log(make( "BAZ" : 3 * 4));
 `;
 
-const src = `
-
-macro set_and_log_foo {
+const src = `macro set_and_log_foo {
     ($e:expr) => {
-        let foo = $e;
+        let 1 foo = $e;
         console.log(foo);
     }
 }
