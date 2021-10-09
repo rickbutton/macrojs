@@ -40,7 +40,7 @@ export class Expander {
     private invocation: MacroInvocation;
     private context: Context;
     private idx = 0;
-    private color: number = COLOR++;
+    private color: number | null = null;
 
     constructor(invocation: MacroInvocation, context: Context) {
         this.macro = invocation.macro;
@@ -120,8 +120,26 @@ export class Expander {
 
                 this.idx += argExpr.tokens.length;
 
+                const leftParen = new Token({
+                    type: tokTypes.parenL,
+                    start: tok.start,
+                    end: tok.end,
+                    loc: tok.loc,
+                    range: tok.range,
+                    options: {},
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                } as any);
+                const rightParen = new Token({
+                    type: tokTypes.parenR,
+                    start: tok.start,
+                    end: tok.end,
+                    loc: tok.loc,
+                    range: tok.range,
+                    options: {},
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                } as any);
                 this.insertBindings(bindings, {
-                    [args.name.name]: argExpr.tokens,
+                    [args.name.name]: [leftParen, ...argExpr.tokens, rightParen],
                 });
                 return true;
             }
@@ -175,6 +193,9 @@ export class Expander {
                 if (inInvocationScope.has(token)) {
                     return null;
                 } else {
+                    if (!this.color) {
+                        this.color = COLOR++;
+                    }
                     return String(this.color);
                 }
             },
