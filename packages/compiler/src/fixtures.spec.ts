@@ -18,10 +18,14 @@ const fixtures: Fixture[] = [
                 one;
                 two;
             }
+            (1 = 2) => {
+                three;
+            }
         }
         foo();
         foo(one);
         foo(one, two);
+        foo(1 = 2);
         `,
         // expected
         `
@@ -29,6 +33,7 @@ const fixtures: Fixture[] = [
         one;
         one;
         two;
+        three;
         `,
     ],
     [

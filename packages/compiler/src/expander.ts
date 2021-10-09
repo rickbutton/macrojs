@@ -21,7 +21,6 @@ function tokIsIdent(tok: Token) {
     return tok.type === tokTypes.name;
 }
 
-// TODO: this needs to care about macro phase for hygeine
 interface ExpansionBindings {
     [name: string]: Token[];
 }
@@ -65,7 +64,6 @@ export class Expander {
         for (let i = 0; i < pattern.arguments.length; i++) {
             const arg = pattern.arguments[i];
             this.tryPatternArgument(arg, bindings);
-            this.eatToken(tokTypes.comma);
         }
 
         const tok = this.currentToken();
@@ -76,12 +74,12 @@ export class Expander {
         // try to expand body with bindings
         return this.tryMacroBody(pattern.body, bindings);
     }
-    tryPatternArgument(args: MacroPatternArgument, bindings: ExpansionBindings): void {
+    tryPatternArgument(args: MacroPatternArgument, bindings: ExpansionBindings): boolean {
         // eventually will need to add another kind
         // for repeats and other groupings
         const tok = this.currentToken();
         if (!tok) {
-            return;
+            return false;
         }
 
         if (args.type === "MacroPatternVariable") {
@@ -90,10 +88,12 @@ export class Expander {
                 tok.value = (tok as any).realValue || tok.value;
 
                 this.insertBinding(bindings, args.name, [tok]);
-                return this.nextToken();
+                this.nextToken();
+                return true;
             } else if (args.kind === "ident" && tokIsIdent(tok)) {
                 this.insertBinding(bindings, args.name, [tok]);
-                return this.nextToken();
+                this.nextToken();
+                return true;
             } else if (args.kind === "expr") {
                 const tokens = this.invocation.tokens.slice(this.idx);
                 const argExpr = this.context.parseMacroArgumentExpression(tokens, {});
@@ -119,15 +119,16 @@ export class Expander {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } as any);
                 this.insertBinding(bindings, args.name, [leftParen, ...argExpr.tokens, rightParen]);
-                return;
+                return true;
             }
         } else if (args.type === "MacroPatternLiteral") {
             if (args.token.type === tok.type && args.token.value === tok.value) {
-                return this.nextToken();
+                this.nextToken();
+                return true;
             }
         }
 
-        throw ExpansionError.fromToken(tok, this.invocation, "unexpected argument to macro pattern");
+        return false;
     }
     tryMacroBody(body: MacroBody, bindings: ExpansionBindings): namedTypes.Program {
         // need to handle repeats at the token level

@@ -189,7 +189,6 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
         }
     }
 
-    // todo: allow macro in expression position
     override parseStatement(context: ParserAny, topLevel: ParserAny, exps: ParserAny): ParserAny {
         if (this.type === MACRO_TOKEN) {
             return this.parseMacroDeclaration();
@@ -235,10 +234,6 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
             while (!done) {
                 const arg = this.parseMacroArgument();
                 node.arguments.push(arg);
-
-                if (this.type === tokTypes.comma) {
-                    this.next();
-                }
 
                 if (this.type === tokTypes.parenR) {
                     done = true;
