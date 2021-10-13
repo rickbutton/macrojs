@@ -2,32 +2,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as recast from "recast";
-import { setupAstTypes, MacroInvocation, MacroArgumentExpression, MacroDeclaration } from "./types";
+import { setupAstTypes, MacroInvocation, MacroDeclaration } from "./types";
 import { MacroParser } from "./parser";
 import { Expander } from "./expander";
 import { namedTypes } from "ast-types";
-import type { Context, ParseHooks } from "./context";
-import type { Token } from "acorn";
+import type { CompilerContext } from "./context";
 import { ExpansionError } from "./error";
 
 setupAstTypes();
 
-function parseProgram(context: Context, src: string | Token[], hooks: ParseHooks): namedTypes.Program {
-    return MacroParser.parseProgram(context, src, hooks);
-}
-
-function parseMacroArgumentExpression(
-    context: Context,
-    src: string | Token[],
-    hooks: ParseHooks
-): MacroArgumentExpression {
-    return MacroParser.parseMacroArgumentExpression(context, src, hooks);
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type NodePath<_T> = any;
 
-function compile(context: Context, ast: namedTypes.Program): namedTypes.Program {
+function compile(context: CompilerContext, ast: namedTypes.Program): namedTypes.Program {
     return recast.visit(ast, {
         visitMacroDeclaration(path: NodePath<MacroDeclaration>) {
             path.replace();
@@ -57,7 +44,10 @@ function compile(context: Context, ast: namedTypes.Program): namedTypes.Program 
                 const stmt = body[0];
 
                 if (!namedTypes.ExpressionStatement.check(stmt)) {
-                    throw ExpansionError.fromInvocation(node, "macro attempted to expand statement into expression position");
+                    throw ExpansionError.fromInvocation(
+                        node,
+                        "macro attempted to expand statement into expression position"
+                    );
                 }
 
                 const expr = stmt.expression;
@@ -84,15 +74,16 @@ function compile(context: Context, ast: namedTypes.Program): namedTypes.Program 
     } as any) as namedTypes.Program;
 }
 
-function codegen(_context: Context, ast: namedTypes.Node): string {
+function codegen(_context: CompilerContext, ast: namedTypes.Node): string {
     return recast.print(ast).code;
 }
 
-export function createCompiler(): Context {
-    const context: Context = {} as Context;
+export function createCompiler(): CompilerContext {
+    const context: CompilerContext = {} as CompilerContext;
 
-    context.parseProgram = parseProgram.bind(null, context);
-    context.parseMacroArgumentExpression = parseMacroArgumentExpression.bind(null, context);
+    context.parseProgram = MacroParser.parseProgram.bind(null, context);
+    context.parseMacroArgumentExpression = MacroParser.parseMacroArgumentExpression.bind(null, context);
+    context.parseStatement = MacroParser.parseStatement.bind(null, context);
     context.compile = compile.bind(null, context);
     context.codegen = codegen.bind(null, context);
 

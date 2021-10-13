@@ -6,6 +6,7 @@
     "dependencies": {
         "acorn": "^8.5.0",
         "ast-types": "^0.14.2",
+        "escodegen": "^2.0.0",
         "recast": "^0.20.5"
     },
     "files": [
@@ -19,6 +20,7 @@
         "access": "public"
     },
     "devDependencies": {
+        "@types/escodegen": "^0.0.7",
         "@types/jest": "^27.0.2"
     }
 }

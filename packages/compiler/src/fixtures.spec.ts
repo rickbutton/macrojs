@@ -138,11 +138,30 @@ const fixtures: Fixture[] = [
         let two_2 = 2;
         `,
     ],
+    [
+        // name
+        "basic repetition",
+        // input
+        `macro add {
+            () => {
+                0
+            }
+            ($arg:expr) => {
+                $arg
+            }
+            ($first:expr, $($rest:expr),) => {
+                $first + add($($rest),);
+            }
+        }
+        add(1, 2, 3, i, 5, 6);`,
+        // expected
+        `1`,
+    ],
 ];
 
 function normalize(src: string): string {
     const compiler = createCompiler();
-    const ast = compiler.parseProgram(src, {});
+    const ast = compiler.parseProgram(src);
     return compiler.codegen(ast);
 }
 
@@ -151,7 +170,7 @@ test.each(fixtures)("%s", (_name: string, input: string, expected: string | null
 
     let actual: string | Error;
     try {
-        const ast = compiler.parseProgram(input, {});
+        const ast = compiler.parseProgram(input);
         const transformed = compiler.compile(ast);
         actual = compiler.codegen(transformed);
     } catch (e) {

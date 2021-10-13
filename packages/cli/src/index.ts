@@ -49,52 +49,29 @@ console.log(make(foo: 1 + 2));
 console.log(make( "BAZ" : 3 * 4));
 `;
 
-const src = `macro set_and_log_foo {
-    ($e:expr) => {
-        let 1 foo = $e;
-        console.log(foo);
-    }
-}
-macro decl {
-    ($name:ident) => {
-        let $name;
-    }
-}
-macro set {
-    ($name:ident = $e:expr) => {
-        $name = $e;
-    }
-}
-macro set_bar {
-    ($e:expr) => {
-        bar = $e;
+const src = `
+macro of {
+    (for (const $val:ident of $expr:expr) {
+        $($stmt:stmt);
+    }) => {
+        let e = $expr;
+        for (let i = 0; i < e.length; i++) {
+            let $val = e[i];
+            $($stmt);
+        }
     }
 }
 
-// foo in runtime phase
-let foo = 1;
-
-// creates a new foo
-// in the macro's phase
-// and logs it
-set_and_log_foo(2);
-
-// creates a new bar
-// but with a name from
-// the runtime phase
-decl(bar);
-// set the same name
-// using the same "bar"
-set(bar = 1);
-// finally, log said bar
-console.log(bar);
-
-// wrong bar!
-set_bar(2);
+const ARR = [[1,2], [3,4], [5,6]];
+of(for (const pair of ARR) {
+    of(for (const num of pair) {
+        console.log(num);
+    });
+});
 `;
 
 const compiler = createCompiler();
-const ast = compiler.parseProgram(src, {});
+const ast = compiler.parseProgram(src);
 const transformed = compiler.compile(ast);
 fs.writeFileSync("out.json", JSON.stringify(transformed, null, 4));
 const out = compiler.codegen(transformed);
