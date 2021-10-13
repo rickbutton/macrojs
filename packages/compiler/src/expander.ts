@@ -5,7 +5,7 @@ import type { namedTypes } from "ast-types";
 import { CompilerContext, createParserContextForExpansion, ParseContext } from "./context";
 import { ExpansionError, InternalCompilerError } from "./error";
 import { consumeTokenTree } from "./tokentree";
-import { MacroBody, MacroDeclaration, MacroInvocation, MacroPattern, MacroPatternArgument, makeToken, Scope } from "./types";
+import { MacroBody, MacroDeclaration, MacroInvocation, MacroPattern, MacroPatternArgument, makeToken } from "./types";
 
 function tokIsLiteral(tok: Token) {
     return (
@@ -220,9 +220,7 @@ export class Expander {
                     }
 
                     for (let i = 1; i < realReps; i++) {
-                        if (i < realReps - 1) {
-                            yield sep;
-                        }
+                        yield sep;
 
                         for (const repResult of this.expandMacroBodyTokenTree(
                             repTokens,

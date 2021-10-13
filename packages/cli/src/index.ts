@@ -50,7 +50,7 @@ console.log(make( "BAZ" : 3 * 4));
 `;
 
 const src = `
-macro of {
+/*macro of {
     (for (const $val:ident of $expr:expr) {
         $($stmt:stmt);
     }) => {
@@ -67,7 +67,17 @@ of(for (const pair of ARR) {
     of(for (const num of pair) {
         console.log(num);
     });
-});
+});*/
+
+macro add {
+    ($arg:literal) => {
+        $arg
+    }
+    ($first:literal, $($rest:literal),) => {
+        $first + add($($rest),);
+    }
+}
+add(1, 2, 3, 4, 5, 6);
 `;
 
 const compiler = createCompiler();

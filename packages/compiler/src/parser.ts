@@ -145,7 +145,7 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
         const node = parser.startNode();
         parser.nextToken();
         node.expression = parser.parseMaybeAssign();
-        node.tokens = parser.allTokens;
+        node.tokens = [...parser.allTokens, parser.lastToken];
 
         return parser.finishNode(node, "MacroArgumentExpression") as ParserAny as MacroArgumentExpression;
     }
@@ -160,7 +160,7 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
         const node = parser.startNode();
         parser.nextToken();
         node.statement = parser.parseStatement(null, true, Object.create(null));
-        node.tokens = parser.allTokens;
+        node.tokens = [...parser.allTokens, parser.lastToken];
 
         return parser.finishNode(node, "MacroArgumentStatement") as ParserAny as MacroArgumentStatement;
     }
@@ -276,8 +276,6 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
 
         node.body = this.parseMacroBody();
 
-        this.expect(tokTypes.braceR);
-
         return this.finishNode(node, "MacroPattern") as ParserAny as MacroPattern;
     }
     parseMacroArgument(): MacroPatternArgument {
@@ -333,13 +331,13 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
         return this.finishNode(node, "MacroBody") as ParserAny as MacroBody;
     }
     parseTokenTree(endGroupTok: TokenType): Token[] {
-        const tokens: Token[] = [];
-        const success = consumeTokenTree(endGroupTok, () => {
-            tokens.push(this.lastToken);
-            return this.nextAndRead();
+        const tokens = consumeTokenTree(endGroupTok, () => {
+            const tok = this.lastToken;
+            this.next();
+            return tok;
         });
 
-        if (!success) {
+        if (!tokens) {
             this.unexpected();
         }
         return tokens;
@@ -372,8 +370,6 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
             node.macro = macro;
             node.tokens = tokens;
             node.scopeStack = this.scopeStack.slice();
-
-            this.expect(tokTypes.parenR);
 
             return this.finishNode(node, "MacroInvocation");
         }

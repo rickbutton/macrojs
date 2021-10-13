@@ -8,9 +8,6 @@ const fixtures: Fixture[] = [
         "smoke tests",
         // input
         `macro foo {
-            () => {
-                empty
-            }
             (one) => {
                 one;
             }
@@ -22,14 +19,12 @@ const fixtures: Fixture[] = [
                 three;
             }
         }
-        foo();
         foo(one);
         foo(one, two);
         foo(1 = 2);
         `,
         // expected
         `
-        empty;
         one;
         one;
         two;
@@ -143,19 +138,16 @@ const fixtures: Fixture[] = [
         "basic repetition",
         // input
         `macro add {
-            () => {
-                0
-            }
-            ($arg:expr) => {
+            ($arg:literal) => {
                 $arg
             }
-            ($first:expr, $($rest:expr),) => {
+            ($first:literal, $($rest:literal),) => {
                 $first + add($($rest),);
             }
         }
-        add(1, 2, 3, i, 5, 6);`,
+        add(1, 2, 3);`,
         // expected
-        `1`,
+        `1 + (2 + 3);`,
     ],
 ];
 
