@@ -145,9 +145,11 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
         const node = parser.startNode();
         parser.nextToken();
         node.expression = parser.parseMaybeAssign();
-        node.tokens = [...parser.allTokens, parser.lastToken];
+        parser.finishNode(node, "MacroArgumentExpression");
 
-        return parser.finishNode(node, "MacroArgumentExpression") as ParserAny as MacroArgumentExpression;
+        node.tokens = [...parser.allTokens];
+
+        return node as MacroArgumentExpression;
     }
 
     static parseStatement(
@@ -160,17 +162,18 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
         const node = parser.startNode();
         parser.nextToken();
         node.statement = parser.parseStatement(null, true, Object.create(null));
-        node.tokens = [...parser.allTokens, parser.lastToken];
+        node.tokens = [...parser.allTokens];
 
         return parser.finishNode(node, "MacroArgumentStatement") as ParserAny as MacroArgumentStatement;
     }
 
     override readToken(code?: ParserAny): void {
+        if (this.lastToken.type !== tokTypes.eof) {
+            this.allTokens.push(this.lastToken);
+        }
         const token = this.srcTokens?.current.shift();
+
         if (token) {
-            if (this.lastToken.type !== tokTypes.eof) {
-                this.allTokens.push(this.lastToken);
-            }
             this.lastToken = token;
 
             const prevType = this.type;
@@ -188,9 +191,6 @@ export class MacroParser extends (Parser as ParserAny as typeof BaseParser) {
             this.type = tokTypes.eof;
             this.value = undefined;
         } else {
-            if (this.lastToken.type !== tokTypes.eof) {
-                this.allTokens.push(this.lastToken);
-            }
             super.readToken(code ?? (NaN as ParserAny));
             this.lastToken = this.createToken();
         }

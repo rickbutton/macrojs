@@ -149,6 +149,41 @@ const fixtures: Fixture[] = [
         // expected
         `1 + (2 + 3);`,
     ],
+    [
+        // name
+        "a nested for loop",
+        // input
+        `macro of {
+            (for (const $val:ident of $expr:expr) {
+                $($stmt:stmt);
+            }) => {
+                let e = $expr;
+                for (let i = 0; i < e.length; i++) {
+                    let $val = e[i];
+                    $($stmt);
+                }
+            }
+        }
+        const ARR = [[1,1]];
+        of(for (const pair of ARR) {
+            of(for (const num of pair) {
+                console.log(num);
+            });
+        });`,
+        // expected
+        `const ARR = [[1, 1]];
+         let e_3 = ARR;
+         
+         for (let i_3 = 0; i_3 < e_3.length; i_3++) {
+             let pair = e_3[i_3];
+             let e_4 = pair;
+         
+             for (let i_4 = 0; i_4 < e_4.length; i_4++) {
+                 let num = e_4[i_4];
+                 console.log(num);
+             }
+         }`,
+    ],
 ];
 
 function normalize(src: string): string {
