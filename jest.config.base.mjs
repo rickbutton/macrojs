@@ -1,6 +1,8 @@
 /** @type {import('ts-jest/dist/types').InitialOptionsTsJest} */
-module.exports = {
-    preset: "ts-jest",
+export default {
+    transform: {
+        "^.+\\.tsx?$": "esbuild-jest",
+    },
     verbose: true,
     testTimeout: 30000,
     testMatch: ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],

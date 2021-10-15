@@ -3,9 +3,13 @@
     "extends": "../../tsconfig.json",
     "compilerOptions": {
         "outDir": "dist",
+        "declarationDir": "dist",
         "rootDir": "src",
         "baseUrl": ".",
         "types": ["node"]
     },
-    "references": [{ "path": "../compiler" }]
+    "paths": {
+        "@macrojs/*": ["../*/src"]
+    },
+    "references": [{ "path": "../compiler" }],
 }
