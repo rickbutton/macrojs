@@ -12,6 +12,7 @@
         "build-repl": "concurrently --raw -n esbuild,tsc \"node build.mjs -r\" \"npm:build-types\"",
         "watch": "concurrently --raw -n esbuild,tsc \"node build.mjs -w\" \"npm:watch-types\"",
         "watch-types": "tsc --build --watch --preserveWatchOutput",
+        "watch-repl": "concurrently --raw -n esbuild,tsc \"node build.mjs -w -r\" \"npm:watch-types\"",
         "test": "jest",
         "test-watch": "jest --watch",
         "lint": "eslint . -f codeframe",

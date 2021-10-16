@@ -129,8 +129,9 @@ function webTargets(name, overrides) {
         makeWebFile("src/index.ts"),
         makeWebFile("src/index.html", { assetNames: "[dir]/[name]" }),
         makeWebFile("src/style.css"),
-        makeWebFile("node_modules/monaco-editor/esm/vs/editor/editor.worker.js"),
-        makeWebFile("node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js"),
+        // if editor support will be needed
+        //makeWebFile("node_modules/monaco-editor/esm/vs/editor/editor.worker.js"),
+        //makeWebFile("node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js"),
     ];
 }
 

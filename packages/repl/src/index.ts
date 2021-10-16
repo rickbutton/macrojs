@@ -5,8 +5,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createCompiler } from "@macrojs/compiler";
-import * as monaco from "monaco-editor/esm/vs/editor/editor.main";
+import "monaco-editor/esm/vs/basic-languages/monaco.contribution";
+import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 
+// if workers are needed
+/*
+import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution";
 (globalThis as any).MonacoEnvironment = {
     getWorkerUrl(_moduleId: any, label: string) {
         if (label === "typescript" || label === "javascript") {
@@ -15,6 +19,7 @@ import * as monaco from "monaco-editor/esm/vs/editor/editor.main";
         return "./editor.worker.js";
     },
 };
+*/
 
 function debounce(func: (...args: any[]) => any, timeout = 300) {
     let timer: ReturnType<typeof setTimeout>;
@@ -35,7 +40,6 @@ function createEditor(id: string, value: string) {
         minimap: { enabled: false },
         scrollbar: { vertical: "hidden" },
         scrollBeyondLastLine: false,
-        inlayHints: { enabled: false },
         folding: false,
         lineDecorationsWidth: 0,
         lineNumbersMinChars: 3,
@@ -72,16 +76,7 @@ doTwice(
 );
 `.trim();
 
-monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-    noSemanticValidation: false,
-    noSyntaxValidation: false,
-});
 const inputEditor = createEditor("input-container", `${input}\n`);
-
-monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-    noSemanticValidation: true,
-    noSyntaxValidation: true,
-});
 const outputEditor = createEditor("output-container", "");
 
 outputEditor.updateOptions({
