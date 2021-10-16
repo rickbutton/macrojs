@@ -1,0 +1,3 @@
+# from https://www.seancdavis.com/blog/use-pnpm-with-netlify/
+name: netlify-plugin-pnpm
+inputs: []
