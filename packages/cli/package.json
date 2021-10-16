@@ -5,6 +5,7 @@
     "types": "dist/index.d.ts",
     "main": "dist/cjs/index.js",
     "module": "dist/esm/index.js",
+    "browser": "dist/browser/index.js",
     "exports": {
         ".": {
             "import": "./dist/esm/index.js",
@@ -24,8 +25,5 @@
     "private": true,
     "publishConfig": {
         "access": "public"
-    },
-    "devDependencies": {
-        "@types/jest": "^27.0.2"
     }
 }

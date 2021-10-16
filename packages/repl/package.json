@@ -1,0 +1,16 @@
+{
+    "name": "@macrojs/repl",
+    "version": "0.0.1",
+    "dependencies": {
+        "@macrojs/compiler": "^0.0.1",
+        "ast-types": "^0.14.2",
+        "monaco-editor": "^0.29.1",
+        "recast": "^0.20.5",
+        "source-map": "^0.7.3"
+    },
+    "browser": {
+        "@macrojs/compiler": "../compiler/dist/browser/index.js"
+    },
+    "license": "MIT",
+    "private": true
+}

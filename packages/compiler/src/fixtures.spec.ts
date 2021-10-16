@@ -1,4 +1,5 @@
 import "jest";
+import type { CodeGenResult } from "./context";
 import { createCompiler } from "./index";
 
 type Fixture = [string, string, string | null];
@@ -172,21 +173,21 @@ const fixtures: Fixture[] = [
         });`,
         // expected
         `const ARR = [[1, 1]];
-         let e_3 = ARR;
+         let e_1 = ARR;
          
-         for (let i_3 = 0; i_3 < e_3.length; i_3++) {
-             let pair = e_3[i_3];
-             let e_4 = pair;
+         for (let i_1 = 0; i_1 < e_1.length; i_1++) {
+             let pair = e_1[i_1];
+             let e_2 = pair;
          
-             for (let i_4 = 0; i_4 < e_4.length; i_4++) {
-                 let num = e_4[i_4];
+             for (let i_2 = 0; i_2 < e_2.length; i_2++) {
+                 let num = e_2[i_2];
                  console.log(num);
              }
          }`,
     ],
 ];
 
-function normalize(src: string): string {
+function normalize(src: string): CodeGenResult {
     const compiler = createCompiler();
     const ast = compiler.parseProgram(src);
     return compiler.codegen(ast);
@@ -199,14 +200,14 @@ test.each(fixtures)("%s", (_name: string, input: string, expected: string | null
     try {
         const ast = compiler.parseProgram(input);
         const transformed = compiler.compile(ast);
-        actual = compiler.codegen(transformed);
+        actual = compiler.codegen(transformed).code;
     } catch (e) {
         actual = e as Error;
     }
 
     const normalized = expected ? normalize(expected) : null;
-    if (typeof normalized === "string") {
-        expect(actual).toEqual(normalized);
+    if (normalized !== null) {
+        expect(actual).toEqual(normalized.code);
     } else {
         expect(actual).toBeInstanceOf(Error);
     }

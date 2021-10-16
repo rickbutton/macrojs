@@ -4,6 +4,7 @@
     "references": [
         { "path": "packages/compiler" },
         { "path": "packages/cli" },
+        { "path": "packages/repl" },
     ],
     "paths": {
         "@macrojs/*": ["packages/*/src"]

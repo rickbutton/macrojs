@@ -1,0 +1,17 @@
+{
+    "include": ["src"],
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "outDir": "dist",
+        "declarationDir": "dist",
+        "rootDir": "src",
+        "baseUrl": ".",
+        "lib": ["dom", "ES2020"],
+        "emitDeclarationOnly": false,
+        "noEmit": true
+    },
+    "paths": {
+        "@macrojs/*": ["../*/src"]
+    },
+    "references": [{ "path": "../compiler" }]
+}

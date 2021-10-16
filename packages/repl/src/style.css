@@ -1,0 +1,50 @@
+@import '../node_modules/monaco-editor/dev/vs/editor/editor.main.css';
+@import './reset.css';
+
+html, body {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    overflow: hidden;
+    background-color: #1E1E1E;
+}
+div {
+    display: flex;
+}
+
+.monaco-editor .lines-content {
+    padding-left: 10px;
+}
+
+#container {
+    flex-direction: column;
+    display: flex;
+    flex: 1;
+}
+
+#header {
+    flex: unset;
+    flex-shrink: 1;
+    min-height: 50px;
+    border-bottom: 5px solid grey;
+}
+
+#header h1 {
+    color: grey;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 30px;
+    margin-top: 8px;
+    margin-left: 20px;
+}
+
+.row {
+    flex: 1;
+    flex-direction: row;
+}
+
+#input-container {
+    flex: 0.5;
+}
+#output-container {
+    flex: 0.5;
+}

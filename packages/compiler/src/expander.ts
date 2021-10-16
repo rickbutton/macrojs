@@ -42,7 +42,7 @@ export class Expander {
         this.invocation = invocation;
         this.context = context;
 
-        this.pctx = createParserContextForExpansion(invocation);
+        this.pctx = createParserContextForExpansion(invocation, context);
     }
     expand(): namedTypes.Program {
         for (const pattern of this.macro.patterns) {

@@ -14,6 +14,12 @@ export interface ParseContext {
     getColorForIdentifier: (id: namedTypes.Identifier) => string | null;
 }
 
+export interface CodeGenResult {
+    code: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    map: any;
+}
+
 export interface CompilerContext {
     parseProgram(src: string | Token[], pctx?: ParseContext): Program;
     parseMacroArgumentExpression(
@@ -22,11 +28,11 @@ export interface CompilerContext {
     ): { expression: Expression; tokens: Token[] };
     parseStatement(src: string | Token[], pctx?: ParseContext): { statement: Statement; tokens: Token[] };
     compile(ast: Program): Program;
-    codegen(ast: Node): string;
+    codegen(ast: Node): CodeGenResult;
+    allocateColor(): number;
 }
 
-let COLOR = 1;
-export function createParserContextForExpansion(invocation: MacroInvocation): ParseContext {
+export function createParserContextForExpansion(invocation: MacroInvocation, context: CompilerContext): ParseContext {
     const identifierToToken = new WeakMap<namedTypes.Identifier, Token>();
     const inMacroScope: Set<Token> = new Set(MacroInvocation.getTokensInMacroScope(invocation));
     let color: number | null = null;
@@ -55,7 +61,7 @@ export function createParserContextForExpansion(invocation: MacroInvocation): Pa
 
             if (inMacroScope.has(token)) {
                 if (!color) {
-                    color = COLOR++;
+                    color = context.allocateColor();
                 }
                 return String(color);
             } else {

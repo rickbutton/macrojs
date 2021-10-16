@@ -6,8 +6,8 @@ import { setupAstTypes, MacroInvocation, MacroDeclaration } from "./types";
 import { MacroParser } from "./parser";
 import { Expander } from "./expander";
 import { namedTypes } from "ast-types";
-import type { CompilerContext } from "./context";
-import { ExpansionError } from "./error";
+import type { CodeGenResult, CompilerContext } from "./context";
+import { ExpansionError, InternalCompilerError } from "./error";
 
 setupAstTypes();
 
@@ -74,8 +74,17 @@ function compile(context: CompilerContext, ast: namedTypes.Program): namedTypes.
     } as any) as namedTypes.Program;
 }
 
-function codegen(_context: CompilerContext, ast: namedTypes.Node): string {
-    return recast.print(ast).code;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function codegen(_context: CompilerContext, ast: namedTypes.Node): CodeGenResult {
+    const { code, map } = recast.print(ast, {
+        sourceFileName: "source.js",
+        sourceMapName: "source.map.json",
+    });
+    if (!map) {
+        throw new InternalCompilerError("expected map");
+    }
+
+    return { code, map };
 }
 
 export function createCompiler(): CompilerContext {
@@ -86,6 +95,9 @@ export function createCompiler(): CompilerContext {
     context.parseStatement = MacroParser.parseStatement.bind(null, context);
     context.compile = compile.bind(null, context);
     context.codegen = codegen.bind(null, context);
+
+    let color = 0;
+    context.allocateColor = () => ++color;
 
     return context;
 }
