@@ -2,5 +2,8 @@
   command = "npm run build-repl"
   publish = "packages/repl/dist/"
 
+[build.environment]
+  NPM_FLAGS="--version"
+
 [[plugins]]
   package = "/.netlify/netlify-plugin-pnpm"
