@@ -49,6 +49,7 @@ function createEditor(id: string, value: string) {
 const input = `
 // input
 
+// swap two variables
 macro swap {
     ($a:ident, $b:ident) => {
         let tmp = $a;
@@ -56,7 +57,10 @@ macro swap {
         $b = tmp;
     }
 }
+let foo = 1, bar = 2;
+swap(foo, bar);
 
+// pattern repetitions
 macro doTwice {
     ($($statements:stmt);) => {
         // do them once
@@ -67,13 +71,7 @@ macro doTwice {
     }
 }
 
-let foo = 1, bar = 2;
-swap(foo, bar);
 
-doTwice(
-    console.log("first");
-    console.log("second");
-);
 `.trim();
 
 const inputEditor = createEditor("input-container", `${input}\n`);

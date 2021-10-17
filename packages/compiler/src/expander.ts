@@ -108,7 +108,8 @@ export class Expander {
 
                 const leftParen = makeToken(tok, tokTypes.parenL, undefined);
                 const rightParen = makeToken(tok, tokTypes.parenR, undefined);
-                this.insertBinding(env, args.name, [leftParen, ...argExpr.tokens, rightParen], depth);
+                //this.insertBinding(env, args.name, [leftParen, ...argExpr.tokens, rightParen], depth);
+                this.insertBinding(env, args.name, argExpr.tokens, depth);
                 return true;
             } else if (args.kind === "stmt") {
                 const tokens = this.invocation.tokens.slice(this.idx);

@@ -2,10 +2,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import * as recast from "recast";
+import { namedTypes } from "ast-types";
+import * as escodegen from "escodegen";
 import { setupAstTypes, MacroInvocation, MacroDeclaration } from "./types";
 import { MacroParser } from "./parser";
 import { Expander } from "./expander";
-import { namedTypes } from "ast-types";
 import type { CodeGenResult, CompilerContext } from "./context";
 import { ExpansionError, InternalCompilerError } from "./error";
 
@@ -76,10 +77,16 @@ function compile(context: CompilerContext, ast: namedTypes.Program): namedTypes.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function codegen(_context: CompilerContext, ast: namedTypes.Node): CodeGenResult {
-    const { code, map } = recast.print(ast, {
-        sourceFileName: "source.js",
-        sourceMapName: "source.map.json",
-    });
+    const { code, map } = escodegen.generate(ast, {
+        format: {
+            indent: {
+                adjustMultilineComment: true,
+            },
+        },
+        sourceMap: "source.js",
+        sourceMapWithCode: true,
+    }) as unknown as CodeGenResult;
+
     if (!map) {
         throw new InternalCompilerError("expected map");
     }
